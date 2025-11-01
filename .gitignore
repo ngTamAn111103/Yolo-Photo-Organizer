@@ -1,0 +1,5 @@
+.venv/
+result/
+*.pt
+database.json
+result

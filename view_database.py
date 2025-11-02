@@ -133,7 +133,8 @@ class ImageBrowserApp(ctk.CTk):
         self.title("Trình duyệt Ảnh YOLO (Nâng cấp)")
         
         self.db_data = {}           
-        self.tag_to_images = {}     
+        self.tag_to_images = {}    
+        self.current_selected_tag = None 
         
         # --- YÊU CẦU 2: LAYOUT MỚI ---
         # Cấu hình Layout (2 hàng, 2 cột)
@@ -223,6 +224,7 @@ class ImageBrowserApp(ctk.CTk):
                 untagged_list.append(image_name)
 
         sorted_tags = sorted(temp_tag_map.keys())
+        self.tag_to_images["_TẤT CẢ_"] = all_images_in_folder
         
         self.tag_to_images["_KHÔNG CÓ TAG_"] = untagged_list
         for tag in sorted_tags:
@@ -232,11 +234,25 @@ class ImageBrowserApp(ctk.CTk):
 
     def populate_tags_list(self):
         """Hiển thị danh sách các nút tag (Sửa để pack ngang)."""
-        for tag in self.tag_to_images.keys():
+        # Sắp xếp lại để _TẤT CẢ_ và _KHÔNG CÓ TAG_ luôn ở đầu
+        all_tags = list(self.tag_to_images.keys())
+        if "_TẤT CẢ_" in all_tags:
+            all_tags.remove("_TẤT CẢ_")
+            all_tags.insert(0, "_TẤT CẢ_")
+        if "_KHÔNG CÓ TAG_" in all_tags:
+            all_tags.remove("_KHÔNG CÓ TAG_")
+            all_tags.insert(1, "_KHÔNG CÓ TAG_")
+            
+        for tag in all_tags:
             
             # --- Logic dịch thuật ---
             display_text = tag # Mặc định
-            if tag == "_KHÔNG CÓ TAG_":
+            
+            # --- SỬA ĐỔI 3: Thêm dịch cho tag mới ---
+            if tag == "_TẤT CẢ_":
+                display_text = "Tất Cả Ảnh"
+            # --- HẾT SỬA ĐỔI 3 ---
+            elif tag == "_KHÔNG CÓ TAG_":
                 display_text = "Không có Tag"
             elif tag in TRANSLATION_DICT:
                 # Nếu có, hiển thị: "Tiếng Việt (english)"
@@ -251,17 +267,28 @@ class ImageBrowserApp(ctk.CTk):
             button.pack(side="left", padx=5, pady=2)
 
     def on_tag_clicked(self, tag_name):
-        """Làm sạch và hiển thị danh sách ảnh (Thêm dịch cho tiêu đề)."""
+        """
+        Làm sạch và hiển thị danh sách ảnh (Thêm dịch cho tiêu đề).
+        Không có preview (Dành cho danh sách ảnh quá nhiều)
+        """
+        
+        # --- SỬA ĐỔI 4: Lưu lại tag vừa bấm ---
+        self.current_selected_tag = tag_name
+        # --- HẾT SỬA ĐỔI 4 ---
         
         # --- Logic dịch thuật cho tiêu đề ---
         display_title = tag_name
-        if tag_name == "_KHÔNG CÓ TAG_":
+        if tag_name == "_TẤT CẢ_":
+            display_title = "Tất Cả Ảnh"
+        elif tag_name == "_KHÔNG CÓ TAG_":
             display_title = "Không có Tag"
         elif tag_name in TRANSLATION_DICT:
             display_title = f"{TRANSLATION_DICT[tag_name]} ({tag_name})"
         
         self.label_images_title.configure(text=f"Ảnh cho tag: {display_title}")
         # --- Hết logic dịch thuật ---
+
+        # self.scrollable_frame_images.set(0.0)
 
         for widget in self.scrollable_frame_images.winfo_children():
             widget.destroy()
@@ -277,6 +304,73 @@ class ImageBrowserApp(ctk.CTk):
                 command=lambda img=image_name: self.on_image_clicked(img)
             )
             button.pack(fill="x", padx=5, pady=2)
+    # def on_tag_clicked(self, tag_name):
+    #     """
+    #     Làm sạch và hiển thị danh sách ảnh (Thêm dịch cho tiêu đề).
+    #     Có preview (Dành cho danh sách có ít ảnh)
+    #     """
+        
+    #     # --- Logic dịch thuật cho tiêu đề ---
+    #     display_title = tag_name
+    #     if tag_name == "_KHÔNG CÓ TAG_":
+    #         display_title = "Không có Tag"
+    #     elif tag_name in TRANSLATION_DICT:
+    #         display_title = f"{TRANSLATION_DICT[tag_name]} ({tag_name})"
+        
+    #     self.label_images_title.configure(text=f"Ảnh cho tag: {display_title}")
+    #     # --- Hết logic dịch thuật ---
+
+    #     # --- SỬA ĐỔI 1: Xóa widget cũ và tạo danh sách giữ tham chiếu ảnh ---
+    #     # Chúng ta cần danh sách này để giữ cho các đối tượng ảnh
+    #     # không bị Python tự động xóa khỏi bộ nhớ (garbage collection)
+    #     self.thumbnail_images = [] 
+    #     for widget in self.scrollable_frame_images.winfo_children():
+    #         widget.destroy()
+        
+    #     # Logic tra cứu vẫn dùng tag_name gốc (tiếng Anh)
+    #     image_list = self.tag_to_images[tag_name] 
+        
+    #     # --- SỬA ĐỔI 2: ĐỊNH NGHĨA KÍCH THƯỚC PREVIEW ---
+    #     THUMB_SIZE = (64, 64) # Kích thước ảnh preview (cao 64, rộng 64)
+
+    #     for image_name in image_list:
+            
+    #         # --- SỬA ĐỔI 3: TẢI VÀ TẠO THUMBNAIL ---
+    #         thumbnail_image = None # Mặc định là không có ảnh
+    #         try:
+    #             # Mở ảnh gốc từ thư mục 'source'
+    #             image_path = os.path.join(SOURCE_DIR, image_name)
+    #             pil_image = Image.open(image_path)
+                
+    #             # Thu nhỏ ảnh (giữ nguyên tỷ lệ)
+    #             pil_image.thumbnail(THUMB_SIZE) 
+                
+    #             # Tạo đối tượng ảnh cho CustomTkinter
+    #             ctk_thumb = ctk.CTkImage(light_image=pil_image, size=THUMB_SIZE)
+                
+    #             # Thêm vào danh sách để giữ tham chiếu
+    #             self.thumbnail_images.append(ctk_thumb) 
+    #             thumbnail_image = ctk_thumb
+
+    #         except Exception as e:
+    #             print(f"Lỗi khi tạo thumbnail cho {image_name}: {e}")
+    #             # Nếu lỗi, thumbnail_image vẫn là None, nút sẽ không có ảnh
+    #         # --- KẾT THÚC SỬA ĐỔI 3 ---
+
+    #         button = ctk.CTkButton(
+    #             self.scrollable_frame_images, 
+    #             text=image_name,
+    #             fg_color="transparent", 
+    #             command=lambda img=image_name: self.on_image_clicked(img),
+                
+    #             # --- SỬA ĐỔI 4: THÊM ẢNH VÀO NÚT ---
+    #             image=thumbnail_image,  # Thêm ảnh preview
+    #             compound="left",      # Đặt ảnh ở bên trái của chữ
+    #             anchor="w"            # Căn lề chữ về bên trái (West)
+    #             # --- KẾT THÚC SỬA ĐỔI 4 ---
+    #         )
+    #         button.pack(fill="x", padx=5, pady=2)
+    
 
     def on_image_clicked(self, image_name):
         """Hiển thị ảnh (Sửa lỗi bóp méo)."""
@@ -294,6 +388,7 @@ class ImageBrowserApp(ctk.CTk):
         if detections:
             draw = ImageDraw.Draw(pil_image)
             try:
+                # (Font loading giữ nguyên)
                 font_path = "/System/Library/Fonts/Helvetica.ttc"
                 font = ImageFont.truetype(font_path, 100)
             except IOError:
@@ -301,14 +396,34 @@ class ImageBrowserApp(ctk.CTk):
                 font = ImageFont.load_default(100)
 
             for det in detections:
-                box = det['box']
-                label = f"{det['class']} ({det['confidence']:.0%})"
-                draw.rectangle(box, outline=BOX_COLOR, width=5)
-                text_y = box[1] - 15
-                if text_y < 0: text_y = 0
-                text_bbox = draw.textbbox((box[0], text_y), label, font=font)
-                draw.rectangle(text_bbox, fill=BOX_COLOR)
-                draw.text((box[0], text_y), label, fill=TEXT_COLOR, font=font)
+                # --- THÊM LOGIC LỌC ---
+                # Chỉ vẽ khi:
+                # 1. Tag đang chọn là "_TẤT CẢ_" (luôn vẽ)
+                # 2. Hoặc Lớp (class) của vật thể khớp với tag đang chọn
+                
+                if (self.current_selected_tag == "_TẤT CẢ_" or 
+                    det['class'] == self.current_selected_tag):
+                    
+                    # (Toàn bộ code vẽ bên dưới được thụt vào trong khối IF này)
+                    box = det['box']
+                    original_class = det['class']
+                    display_class = original_class # Mặc định
+                    
+                    if original_class in TRANSLATION_DICT:
+                        # Tạo định dạng: "Tiếng Việt (english)"
+                        display_class = f"{TRANSLATION_DICT[original_class]} ({original_class})"
+                    
+                    # Thêm độ tin cậy vào nhãn
+                    label = f"{display_class} ({det['confidence']:.0%})"
+
+                    draw.rectangle(box, outline=BOX_COLOR, width=5)
+                    text_y = box[1] - 15
+                    if text_y < 0: text_y = 0
+                    text_bbox = draw.textbbox((box[0], text_y), label, font=font)
+                    draw.rectangle(text_bbox, fill=BOX_COLOR)
+                    draw.text((box[0], text_y), label, fill=TEXT_COLOR, font=font)
+                
+                # --- HẾT LOGIC LỌC ---
         
         # --- YÊU CẦU 3: SỬA LỖI BÓP MÉO ẢNH ---
         orig_width, orig_height = pil_image.size
